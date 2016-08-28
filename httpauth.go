@@ -1,6 +1,7 @@
 package httpauth
 
 import (
+	"errors"
 	"net/http"
 	"net/url"
 	"strings"
@@ -9,6 +10,8 @@ import (
 var (
 	// returnURL is the query parameter used to specify the url to return to once authentication is completed.
 	returnURL = "ret"
+
+	ErrDoesntHaveIdentity = errors.New("user doesn't have identity")
 )
 
 func contains(s []string, e string) bool {
@@ -23,8 +26,8 @@ func contains(s []string, e string) bool {
 // RequireRole requires the user to have one of the specified roles.
 func RequireRole(roles []string, provider AuthorizationProvider, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		identity, err := provider.GetRole(r)
-		if err == ErrNotInRole {
+		identity, err := provider.GetIdentity(r)
+		if err == ErrDoesntHaveIdentity {
 			redirectToLoginURL(w, r, provider)
 			return
 		}
