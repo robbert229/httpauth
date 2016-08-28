@@ -13,15 +13,21 @@ var (
 // AuthorizationProvider is the interface that describes the authorization mechanisms.
 type AuthorizationProvider interface {
 	// SetRole sets the role of the user.
-	SetRole(w http.ResponseWriter) error
+	SetRole(w http.ResponseWriter, identity Identity) error
+	// GetRoles return the users roll, or an error if the user has no role.
+	GetRole(r *http.Request) (Identity, error)
 	// RemoveRole removes the role from the user.
 	RemoveRole(w http.ResponseWriter) error
-	// GetRoles return the users roll, or an error if the user has no role.
-	GetRole(r *http.Request) (string, error)
+
 	// IsInRole requires the user to be in the specified role. Returns an error if the user is not in the specified role.
 	GetLoginURL() string
 	// GetInvalidRoleURL returns the login url
 	GetInvalidRoleURL() string
+}
+
+type Identity struct {
+	UserID string
+	Role   string
 }
 
 // JWTAuthenticationProvider is the default authentication provider
@@ -41,7 +47,7 @@ func (j *JWTAuthenticationProvider) GetInvalidRoleURL() string {
 }
 
 // SetRole sets the role of the current user.
-func (j *JWTAuthenticationProvider) SetRole(w http.ResponseWriter) error {
+func (j *JWTAuthenticationProvider) SetRole(w http.ResponseWriter, identity Identity) error {
 	return nil
 }
 
@@ -50,7 +56,7 @@ func (j *JWTAuthenticationProvider) RemoveRole(w http.ResponseWriter) error {
 	return nil
 }
 
-// IsInRole returns true if the user is any of the specified roles.
-func (j *JWTAuthenticationProvider) IsInRole(r *http.Request, roles []string) error {
-	return nil
+// GetRole returns true if the user is any of the specified roles.
+func (j *JWTAuthenticationProvider) GetRole(r *http.Request) (Identity, error) {
+	return Identity{}, nil
 }

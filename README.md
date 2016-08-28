@@ -1,6 +1,6 @@
 
 # httpauth
-This is a minimal implementation of JWT designed with simplicity in mind.
+This is an http middleware layer that allows for role based authentication.
 
 ## Why?
 

@@ -21,9 +21,9 @@ func contains(s []string, e string) bool {
 }
 
 // RequireRole requires the user to have one of the specified roles.
-func RequireRole(next http.Handler, roles []string, provider AuthorizationProvider) http.Handler {
+func RequireRole(roles []string, provider AuthorizationProvider, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		role, err := provider.GetRole(r)
+		identity, err := provider.GetRole(r)
 		if err == ErrNotInRole {
 			redirectToLoginURL(w, r, provider)
 			return
@@ -33,7 +33,7 @@ func RequireRole(next http.Handler, roles []string, provider AuthorizationProvid
 			panic(err)
 		}
 
-		if contains(roles, role) {
+		if contains(roles, identity.Role) {
 			next.ServeHTTP(w, r)
 			return
 		}
