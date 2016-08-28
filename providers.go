@@ -1,6 +1,14 @@
 package httpauth
 
-import "net/http"
+import (
+	"errors"
+	"net/http"
+)
+
+var (
+	// ErrNotInRole is returns by GetRole when the user isn't in any role.
+	ErrNotInRole = errors.New("user not in role")
+)
 
 // AuthorizationProvider is the interface that describes the authorization mechanisms.
 type AuthorizationProvider interface {
@@ -8,9 +16,9 @@ type AuthorizationProvider interface {
 	SetRole(w http.ResponseWriter) error
 	// RemoveRole removes the role from the user.
 	RemoveRole(w http.ResponseWriter) error
+	// GetRoles return the users roll, or an error if the user has no role.
+	GetRole(r *http.Request) (string, error)
 	// IsInRole requires the user to be in the specified role. Returns an error if the user is not in the specified role.
-	IsInRole(r *http.Request, roles []string) error
-	// GetLoginURL returns the login url that it should redirect to upon attempting to visit a url that requires a role.
 	GetLoginURL() string
 	// GetInvalidRoleURL returns the login url
 	GetInvalidRoleURL() string

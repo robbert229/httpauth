@@ -10,8 +10,9 @@ import (
 
 func TestRedirectToLogin(t *testing.T) {
 	target := "/Admin/MurderTheDb"
-	config := Config{
-		LoginURL: "/Accounts/Login",
+	config := &JWTAuthenticationProvider{
+		LoginURL:       "/Accounts/Login",
+		InvalidRoleURL: "/",
 	}
 
 	request := httptest.NewRequest("GET", target, bytes.NewBuffer(nil))

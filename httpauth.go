@@ -3,6 +3,7 @@ package httpauth
 import (
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 var (
@@ -10,10 +11,34 @@ var (
 	returnURL = "ret"
 )
 
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if strings.Compare(a, e) == 0 {
+			return true
+		}
+	}
+	return false
+}
+
 // RequireRole requires the user to have one of the specified roles.
 func RequireRole(next http.Handler, roles []string, provider AuthorizationProvider) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		role, err := provider.GetRole(r)
+		if err == ErrNotInRole {
+			redirectToLoginURL(w, r, provider)
+			return
+		}
 
+		if err != nil {
+			panic(err)
+		}
+
+		if contains(roles, role) {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		redirectToInvalidRoleURL(w, r, provider)
 	})
 }
 
@@ -30,4 +55,8 @@ func redirectToLoginURL(w http.ResponseWriter, r *http.Request, provider Authori
 	url.RawQuery = query.Encode()
 
 	http.Redirect(w, r, url.String(), 302)
+}
+
+func redirectToInvalidRoleURL(w http.ResponseWriter, r *http.Request, provider AuthorizationProvider) {
+	http.Redirect(w, r, provider.GetInvalidRoleURL(), 401)
 }
