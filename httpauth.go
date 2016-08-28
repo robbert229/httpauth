@@ -8,9 +8,9 @@ import (
 )
 
 var (
-	// returnURL is the query parameter used to specify the url to return to once authentication is completed.
+	// returnURL is the query parameter used to specify the url to return to once the user is logged in.
 	returnURL = "ret"
-
+	// ErrDoesntHaveIdentity is returned when you attempt to get the identity of the user, who isn't logged in yet.
 	ErrDoesntHaveIdentity = errors.New("user doesn't have identity")
 )
 
@@ -21,6 +21,19 @@ func contains(s []string, e string) bool {
 		}
 	}
 	return false
+}
+
+// RequireLoggedIn requires the user to be logged in to access this page.
+func RequireLoggedIn(provider AuthorizationProvider, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, err := provider.GetIdentity(r)
+		if err != nil {
+			redirectToLoginURL(w, r, provider)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
 
 // RequireRole requires the user to have one of the specified roles.

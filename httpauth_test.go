@@ -38,7 +38,32 @@ func (t *TestProvider) GetInvalidRoleURL() string {
 	return "/Accounts/InvalidPermissions"
 }
 
-func TestRedirectToLogin(t *testing.T) {
+func Success() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+	})
+}
+
+func TestRedirectToLoginURL(t *testing.T) {
+	target := "/Admin/MurderTheDb"
+
+	request := httptest.NewRequest("GET", target, bytes.NewBuffer(nil))
+	recorder := httptest.NewRecorder()
+
+	provider := &TestProvider{}
+
+	redirectToLoginURL(recorder, request, provider)
+
+	expected := "/Accounts/Login?ret=%2FAdmin%2FMurderTheDb"
+	actual := recorder.Header().Get("Location")
+	if strings.Compare(actual, expected) != 0 {
+		fmt.Println("Expected: " + expected)
+		fmt.Println("Actual: " + actual)
+		t.Fatal("failed to redirect")
+	}
+}
+
+func TestRequireRoleRedirectToLogin(t *testing.T) {
 	target := "/Admin/MurderTheDb"
 	provider := &TestProvider{}
 
@@ -50,17 +75,9 @@ func TestRedirectToLogin(t *testing.T) {
 	if recorder.Code != 302 {
 		t.Fatal("Didn't redirect")
 	}
-
-	expected := "/Accounts/Login?ret=%2FAdmin%2FMurderTheDb"
-	actual := recorder.Header().Get("Location")
-	if strings.Compare(actual, expected) != 0 {
-		fmt.Println("Expected: " + expected)
-		fmt.Println("Actual: " + actual)
-		t.Fatal("failed to redirect")
-	}
 }
 
-func TestRedirectToInvalidRole(t *testing.T) {
+func TestRequireRoleRedirectToInvalidRole(t *testing.T) {
 	target := "/Foo/Bar"
 	provider := &TestProvider{}
 
@@ -75,7 +92,7 @@ func TestRedirectToInvalidRole(t *testing.T) {
 	RequireRole([]string{"editor"}, provider, http.NotFoundHandler()).ServeHTTP(recorder, request)
 
 	if recorder.Code != 401 {
-		t.Fatal("Didn't redirect")
+		t.Fatal("didn't redirect to inavlid permissions url")
 	}
 
 	expected := "/Accounts/InvalidPermissions"
@@ -83,6 +100,58 @@ func TestRedirectToInvalidRole(t *testing.T) {
 	if strings.Compare(actual, expected) != 0 {
 		fmt.Println("Expected: " + expected)
 		fmt.Println("Actual: " + actual)
-		t.Fatal("failed to redirect")
+		t.Fatal("didn't redirect to inavlid permissions url")
+	}
+}
+
+func TestRequireRoleServeProtectedContent(t *testing.T) {
+	target := "/Foo/Bar"
+	provider := &TestProvider{}
+
+	request := httptest.NewRequest("GET", target, bytes.NewBuffer(nil))
+	recorder := httptest.NewRecorder()
+
+	provider.SetIdentity(recorder, Identity{
+		UserID: "test",
+		Role:   "viewer",
+	})
+
+	RequireRole([]string{"viewer"}, provider, Success()).ServeHTTP(recorder, request)
+
+	if recorder.Code != 200 {
+		t.Fatal("didn't return success code")
+	}
+}
+
+func TestRequireLoggedInRedirectsToLogin(t *testing.T) {
+	target := "/Foo"
+	provider := &TestProvider{}
+
+	request := httptest.NewRequest("GET", target, bytes.NewBuffer(nil))
+	recorder := httptest.NewRecorder()
+
+	RequireLoggedIn(provider, Success()).ServeHTTP(recorder, request)
+
+	if recorder.Code != 302 {
+		t.Fatal("didn't redirect user to login page")
+	}
+}
+
+func TestRequireLoggedServeProtectedContent(t *testing.T) {
+	target := "/Foo"
+	provider := &TestProvider{}
+
+	request := httptest.NewRequest("GET", target, bytes.NewBuffer(nil))
+	recorder := httptest.NewRecorder()
+
+	provider.SetIdentity(recorder, Identity{
+		UserID: "foo",
+		Role:   "user",
+	})
+
+	RequireLoggedIn(provider, Success()).ServeHTTP(recorder, request)
+
+	if recorder.Code != 200 {
+		t.Fatal("didn't return success")
 	}
 }
