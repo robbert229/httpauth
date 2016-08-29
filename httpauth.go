@@ -54,7 +54,7 @@ func RequireRole(roles []string, provider AuthorizationProvider, next http.Handl
 			return
 		}
 
-		redirectToInvalidRoleURL(w, r, provider)
+		http.Redirect(w, r, provider.GetInvalidRoleURL(), 401)
 	})
 }
 
@@ -71,8 +71,4 @@ func redirectToLoginURL(w http.ResponseWriter, r *http.Request, provider Authori
 	url.RawQuery = query.Encode()
 
 	http.Redirect(w, r, url.String(), 302)
-}
-
-func redirectToInvalidRoleURL(w http.ResponseWriter, r *http.Request, provider AuthorizationProvider) {
-	http.Redirect(w, r, provider.GetInvalidRoleURL(), 401)
 }
