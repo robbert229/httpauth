@@ -77,7 +77,7 @@ func (j *JWTAuthenticationProvider) RemoveIdentity(w http.ResponseWriter) error 
 func (j *JWTAuthenticationProvider) GetIdentity(r *http.Request) (httpauth.Identity, error) {
 	cookie, err := r.Cookie(AuthorizationCookie)
 	if err != nil {
-		return httpauth.Identity{}, httpauth.ErrDoesntHaveIdentity
+		return httpauth.Identity{}, errors.Wrap(err, "unable to get identity cookie")
 	}
 
 	claims, err := j.algorithm.Decode(cookie.Value)
@@ -85,14 +85,18 @@ func (j *JWTAuthenticationProvider) GetIdentity(r *http.Request) (httpauth.Ident
 		return httpauth.Identity{}, errors.Wrap(err, "unable to decode cookie!")
 	}
 
+	if err := j.algorithm.Validate(cookie.Value); err != nil {
+		return httpauth.Identity{}, errors.Wrap(err, "invalid cookie")
+	}
+
 	userID, err := claims.Get(userIDKey)
 	if err != nil {
-		return httpauth.Identity{}, httpauth.ErrDoesntHaveIdentity
+		return httpauth.Identity{}, errors.Wrap(err, "no userid claims present")
 	}
 
 	role, err := claims.Get(roleKey)
 	if err != nil {
-		return httpauth.Identity{}, httpauth.ErrDoesntHaveIdentity
+		return httpauth.Identity{}, errors.Wrap(err, "no role claims present")
 	}
 
 	return httpauth.Identity{

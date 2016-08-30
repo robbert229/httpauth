@@ -1,7 +1,6 @@
 package httpauth
 
 import (
-	"errors"
 	"net/http"
 	"net/url"
 	"strings"
@@ -10,8 +9,6 @@ import (
 var (
 	// returnURL is the query parameter used to specify the url to return to once the user is logged in.
 	returnURL = "ret"
-	// ErrDoesntHaveIdentity is returned when you attempt to get the identity of the user, who isn't logged in yet.
-	ErrDoesntHaveIdentity = errors.New("user doesn't have identity")
 )
 
 func contains(s []string, e string) bool {
@@ -40,13 +37,9 @@ func RequireLoggedIn(provider AuthorizationProvider, next http.Handler) http.Han
 func RequireRole(roles []string, provider AuthorizationProvider, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		identity, err := provider.GetIdentity(r)
-		if err == ErrDoesntHaveIdentity {
+		if err != nil {
 			redirectToLoginURL(w, r, provider)
 			return
-		}
-
-		if err != nil {
-			panic(err)
 		}
 
 		if contains(roles, identity.Role) {
@@ -63,7 +56,7 @@ func redirectToLoginURL(w http.ResponseWriter, r *http.Request, provider Authori
 
 	url, err := url.Parse(provider.GetLoginURL())
 	if err != nil {
-		panic(err)
+		http.Redirect(w, r, provider.GetLoginURL(), 302)
 	}
 
 	query := url.Query()

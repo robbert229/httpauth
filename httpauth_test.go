@@ -2,6 +2,7 @@ package httpauth
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -20,7 +21,7 @@ func (t *TestProvider) SetIdentity(w http.ResponseWriter, identity Identity) err
 
 func (t *TestProvider) GetIdentity(r *http.Request) (Identity, error) {
 	if t.identity == nil {
-		return Identity{}, ErrDoesntHaveIdentity
+		return Identity{}, errors.New("user not logged in")
 	}
 	return *t.identity, nil
 }
