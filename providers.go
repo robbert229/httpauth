@@ -17,6 +17,7 @@ type AuthorizationProvider interface {
 	GetInvalidRoleURL() string
 }
 
+// Identity is returned by GetIdentity, and set by SetIdentity. It contains a unique identifier for a user, and his Role.
 type Identity struct {
 	UserID string
 	Role   string
