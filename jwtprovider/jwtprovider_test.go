@@ -1,18 +1,24 @@
 package jwtprovider
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/robbert229/httpauth"
 	"github.com/robbert229/jwt"
 )
 
+func testInvalidRoleHandler(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, "/invalid-role", http.StatusTemporaryRedirect)
+}
+
 func TestProviderSetIdentity(t *testing.T) {
-	provider := NewProvider("/invalid-role", "/login", "secret")
+	provider := NewProvider(testInvalidRoleHandler, httpauth.RedirectToRequested("/login"), "secret")
 	algorithm := jwt.HmacSha512("secret")
 
 	user := "user"
@@ -55,7 +61,7 @@ func TestProviderSetIdentity(t *testing.T) {
 }
 
 func TestProviderGetIdentity(t *testing.T) {
-	provider := NewProvider("/invalid-role", "/login", "secret")
+	provider := NewProvider(testInvalidRoleHandler, httpauth.RedirectToRequested("/login"), "secret")
 	algorithm := jwt.HmacSha512("secret")
 
 	userID := "user"
@@ -78,7 +84,9 @@ func TestProviderGetIdentity(t *testing.T) {
 
 	identity, err := provider.GetIdentity(request)
 	if err != nil {
-		t.Fatal(errors.Wrap(err, "failed to get identity"))
+		err = errors.Wrap(err, "failed to get identity")
+		fmt.Printf("%+v", err)
+		t.Fatal(err)
 	}
 
 	if strings.Compare(userID, identity.UserID) != 0 {
@@ -89,4 +97,43 @@ func TestProviderGetIdentity(t *testing.T) {
 		t.Fatal(errors.New("roles didn't match"))
 	}
 
+}
+
+func TestProviderRemoveIdentity(t *testing.T) {
+	provider := NewProvider(testInvalidRoleHandler, httpauth.RedirectToRequested("/login"), "secret")
+
+	user := "user"
+	role := "admin"
+
+	identity := httpauth.Identity{
+		UserID: user,
+		Role:   role,
+	}
+
+	recorder := httptest.NewRecorder()
+	err := provider.SetIdentity(recorder, identity)
+	if err != nil {
+		t.Fatal(errors.Wrap(err, "unable to set identity cookie"))
+	}
+
+	setCookie := recorder.HeaderMap["Set-Cookie"]
+
+	request := &http.Request{Header: http.Header{"Cookie": setCookie}}
+	recorder = httptest.NewRecorder()
+
+	if err := provider.RemoveIdentity(recorder); err != nil {
+		t.Fatal(errors.Wrap(err, "unable to remove identity"))
+	}
+
+	request = &http.Request{Header: http.Header{"Cookie": setCookie}}
+
+	// Extract the dropped cookie from the request.
+	cookie, err := request.Cookie(AuthorizationCookie)
+	if err != nil {
+		t.Fatal(errors.Wrap(err, "unable to extract cookie!"))
+	}
+
+	if cookie.Expires.Before(time.Now()) == false {
+		t.Fatal(errors.New("cookie didn't expire"))
+	}
 }

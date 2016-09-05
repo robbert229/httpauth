@@ -11,10 +11,11 @@ type AuthorizationProvider interface {
 	// RemoveIdentity removes the role from the user.
 	RemoveIdentity(w http.ResponseWriter) error
 
-	// IsInRole requires the user to be in the specified role. Returns an error if the user is not in the specified role.
-	GetLoginURL() string
-	// GetInvalidRoleURL returns the login url
-	GetInvalidRoleURL() string
+	// Handles when a user needs to be shown an error page for not being in the correct role.
+	HandleInvalidRole(w http.ResponseWriter, r *http.Request)
+
+	// Handles when a user needs to login.
+	HandleLogin(w http.ResponseWriter, r *http.Request, redirect string)
 }
 
 // Identity is returned by GetIdentity, and set by SetIdentity. It contains a unique identifier for a user, and his Role.

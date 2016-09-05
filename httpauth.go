@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	// returnURL is the query parameter used to specify the url to return to once the user is logged in.
-	returnURL = "ret"
+	// ReturnURL is the query parameter used to specify the url to return to once the user is logged in.
+	ReturnURL = "ret"
 )
 
 func contains(s []string, e string) bool {
@@ -47,21 +47,22 @@ func RequireRole(roles []string, provider AuthorizationProvider, next http.Handl
 			return
 		}
 
-		http.Redirect(w, r, provider.GetInvalidRoleURL(), 401)
+		provider.HandleInvalidRole(w, r)
 	})
 }
 
-func redirectToLoginURL(w http.ResponseWriter, r *http.Request, provider AuthorizationProvider) {
-	requested := r.URL.Path
+// RedirectToRequested returns a handler to redirect to a login url and preserve the originially requested url as a get parameter.
+func RedirectToRequested(loginURL string) func(w http.ResponseWriter, r *http.Request, requested string) {
+	return func(w http.ResponseWriter, r *http.Request, requested string) {
+		url, _ := url.Parse(loginURL)
+		query := url.Query()
+		query.Set(ReturnURL, requested)
+		url.RawQuery = query.Encode()
 
-	url, err := url.Parse(provider.GetLoginURL())
-	if err != nil {
-		http.Redirect(w, r, provider.GetLoginURL(), 302)
+		http.Redirect(w, r, url.String(), http.StatusTemporaryRedirect)
 	}
+}
 
-	query := url.Query()
-	query.Set(returnURL, requested)
-	url.RawQuery = query.Encode()
-
-	http.Redirect(w, r, url.String(), 302)
+func redirectToLoginURL(w http.ResponseWriter, r *http.Request, provider AuthorizationProvider) {
+	provider.HandleLogin(w, r, r.URL.Path)
 }

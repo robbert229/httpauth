@@ -31,12 +31,12 @@ func (t *TestProvider) RemoveIdentity(w http.ResponseWriter) error {
 	return nil
 }
 
-func (t *TestProvider) GetLoginURL() string {
-	return "/Accounts/Login"
+func (t *TestProvider) HandleLogin(w http.ResponseWriter, r *http.Request, requested string) {
+	RedirectToRequested("/Accounts/Login")(w, r, requested)
 }
 
-func (t *TestProvider) GetInvalidRoleURL() string {
-	return "/Accounts/InvalidPermissions"
+func (t *TestProvider) HandleInvalidRole(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, "/Accounts/InvalidPermissions", http.StatusUnauthorized)
 }
 
 func Success() http.Handler {
@@ -73,7 +73,7 @@ func TestRequireRoleRedirectToLogin(t *testing.T) {
 
 	RequireRole([]string{}, provider, http.NotFoundHandler()).ServeHTTP(recorder, request)
 
-	if recorder.Code != 302 {
+	if recorder.Code != http.StatusTemporaryRedirect {
 		t.Fatal("Didn't redirect")
 	}
 }
@@ -92,7 +92,7 @@ func TestRequireRoleRedirectToInvalidRole(t *testing.T) {
 
 	RequireRole([]string{"editor"}, provider, http.NotFoundHandler()).ServeHTTP(recorder, request)
 
-	if recorder.Code != 401 {
+	if recorder.Code != http.StatusUnauthorized {
 		t.Fatal("didn't redirect to inavlid permissions url")
 	}
 
@@ -133,7 +133,7 @@ func TestRequireLoggedInRedirectsToLogin(t *testing.T) {
 
 	RequireLoggedIn(provider, Success()).ServeHTTP(recorder, request)
 
-	if recorder.Code != 302 {
+	if recorder.Code != http.StatusTemporaryRedirect {
 		t.Fatal("didn't redirect user to login page")
 	}
 }

@@ -17,29 +17,29 @@ var (
 )
 
 // NewProvider returns a new authentication provider that runs on jwt.
-func NewProvider(invalidRoleURL, loginURL, secret string) httpauth.AuthorizationProvider {
+func NewProvider(invalidRoleHandler http.HandlerFunc, loginHandler func(w http.ResponseWriter, r *http.Request, redirect string), secret string) httpauth.AuthorizationProvider {
 	return &JWTAuthenticationProvider{
-		InvalidRoleURL: invalidRoleURL,
-		LoginURL:       loginURL,
-		algorithm:      jwt.HmacSha512(secret),
+		InvalidRoleHandler: invalidRoleHandler,
+		LoginHandler:       loginHandler,
+		algorithm:          jwt.HmacSha512(secret),
 	}
 }
 
 // JWTAuthenticationProvider is the default authentication provider
 type JWTAuthenticationProvider struct {
-	InvalidRoleURL string
-	LoginURL       string
-	algorithm      jwt.Algorithm
+	InvalidRoleHandler http.HandlerFunc
+	LoginHandler       func(w http.ResponseWriter, r *http.Request, redirect string)
+	algorithm          jwt.Algorithm
 }
 
-// GetLoginURL returns the url to redirect the user to when he isn't in any role.
-func (j *JWTAuthenticationProvider) GetLoginURL() string {
-	return j.LoginURL
+// HandleLogin calls the http.HandlerFunc called when a user needs to be redirected to the login page.
+func (j *JWTAuthenticationProvider) HandleLogin(w http.ResponseWriter, r *http.Request, redirect string) {
+	j.LoginHandler(w, r, redirect)
 }
 
-// GetInvalidRoleURL returns the url to redirect the user to when he lacks the appropriate role required.
-func (j *JWTAuthenticationProvider) GetInvalidRoleURL() string {
-	return j.InvalidRoleURL
+// HandleInvalidRole calls the http.HandlerFunc called when a user lacks permission for a certain action.
+func (j *JWTAuthenticationProvider) HandleInvalidRole(w http.ResponseWriter, r *http.Request) {
+	j.InvalidRoleHandler.ServeHTTP(w, r)
 }
 
 // SetIdentity sets the role of the current user.
